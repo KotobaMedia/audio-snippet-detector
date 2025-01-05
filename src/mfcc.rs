@@ -2,7 +2,7 @@ use ndarray::Array1;
 use rustfft::Fft;
 use rustfft::{num_complex::Complex, FftPlanner};
 use std::sync::mpsc::Receiver;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 // We need PI for the Hamming calculation
 use std::f32::consts::PI;
 
@@ -13,9 +13,13 @@ const FRAME_HOP_S: f32 = 0.010; // 10ms
 const FRAME_HOP: usize = (SAMPLE_RATE * FRAME_HOP_S) as usize;
 pub const N_FILTERS: usize = 20; // Number of Mel filter banks
 
+pub enum MfccSource {
+    Channel(Receiver<Vec<u8>>),
+    Reader(Box<dyn std::io::Read>),
+}
+
 pub struct MfccIter {
-    input: Receiver<Vec<u8>>,
-    input_pos: usize,
+    input: MfccSource,
     input_bytes: Vec<u8>,
     ring_buffer: [f32; WINDOW_SIZE],
     index: usize,
@@ -23,13 +27,12 @@ pub struct MfccIter {
     hamming_window: Vec<f32>,
 }
 impl MfccIter {
-    pub fn new(input: Receiver<Vec<u8>>) -> Self {
+    pub fn new(input: MfccSource) -> Self {
         let mut planner = FftPlanner::new();
         let fft = planner.plan_fft_forward(WINDOW_SIZE);
         let hamming_window = create_hamming_window(WINDOW_SIZE);
         Self {
             input,
-            input_pos: 0,
             input_bytes: Vec::new(),
             ring_buffer: [0f32; WINDOW_SIZE],
             index: 0,
@@ -37,35 +40,66 @@ impl MfccIter {
             hamming_window,
         }
     }
+
+    fn process_sample(&mut self, sample: i16) -> Option<Array1<f32>> {
+        let normalized_sample = sample as f32 / 32768.0;
+        self.ring_buffer[self.index] = normalized_sample;
+        self.index = (self.index + 1) % WINDOW_SIZE;
+        if self.index % FRAME_HOP != 0 {
+            return None;
+        }
+        let ordered_buffer = reorder_ring_buffer(&self.ring_buffer, self.index);
+        Some(process_window(
+            &self.fft,
+            &self.hamming_window,
+            &ordered_buffer,
+        ))
+    }
+
+    fn read_from_source(&mut self) -> bool {
+        match &mut self.input {
+            MfccSource::Channel(channel) => {
+                if let Ok(bytes) = channel.recv() {
+                    self.input_bytes.extend_from_slice(&bytes);
+                    true
+                } else {
+                    false
+                }
+            }
+            MfccSource::Reader(reader) => {
+                let mut buffer = [0u8; 8192]; // 8KB buffer
+                match reader.read(&mut buffer) {
+                    Ok(0) => false, // EOF
+                    Ok(n) => {
+                        self.input_bytes.extend_from_slice(&buffer[..n]);
+                        true
+                    }
+                    Err(_) => false,
+                }
+            }
+        }
+    }
 }
 impl Iterator for MfccIter {
     type Item = Array1<f32>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        while let Ok(bytes) = self.input.recv() {
-            self.input_bytes.extend_from_slice(&bytes);
-
-            // println!("current input_bytes: {:?}", self.input_bytes);
-
-            while self.input_bytes.len() - self.input_pos >= 2 {
-                let sample_bytes = &self.input_bytes[..2];
-
-                let sample_i16 = i16::from_le_bytes([sample_bytes[0], sample_bytes[1]]);
-                // println!("read bytes: {:?}: {:?}", sample_bytes, sample_i16);
-                self.input_bytes.drain(0..2);
-
-                let normalized_sample = sample_i16 as f32 / 32768.0;
-                self.ring_buffer[self.index] = normalized_sample;
-                self.index = (self.index + 1) % WINDOW_SIZE;
-                if self.index % FRAME_HOP != 0 {
-                    continue;
+        loop {
+            while self.input_bytes.len() < 2 {
+                if !self.read_from_source() {
+                    return None;
                 }
-                let ordered_buffer = reorder_ring_buffer(&self.ring_buffer, self.index);
-                let mfcc_vec = process_window(&self.fft, &self.hamming_window, &ordered_buffer);
-                return Some(mfcc_vec);
+            }
+
+            while self.input_bytes.len() >= 2 {
+                let sample_bytes = &self.input_bytes[..2];
+                let sample = i16::from_le_bytes([sample_bytes[0], sample_bytes[1]]);
+                self.input_bytes.drain(0..2);
+                if let Some(mfcc) = self.process_sample(sample) {
+                    return Some(mfcc);
+                }
             }
         }
-        None
     }
 }
 

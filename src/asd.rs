@@ -1,7 +1,4 @@
 use std::{
-    cell::{Cell, RefCell},
-    io::{BufReader, Cursor, Seek, Write},
-    rc::Rc,
     sync::{
         mpsc::{channel, Receiver, RecvError, SendError, Sender},
         Arc, Mutex, RwLock,
@@ -29,7 +26,7 @@ impl AudioSnippetDetector {
         // create the processing thread
         let thread_db = db.clone();
         thread::spawn(move || {
-            let mfcc_stream = MfccIter::new(input_rx);
+            let mfcc_stream = MfccIter::new(crate::mfcc::MfccSource::Channel(input_rx));
             let mut overlapping_stream = util::OverlappingMfccStream::new(mfcc_stream, 100);
             while let Some(mfcc_vec) = overlapping_stream.next() {
                 let db = thread_db.lock().unwrap();

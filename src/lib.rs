@@ -3,11 +3,7 @@ mod db;
 mod mfcc;
 mod util;
 
-use std::{
-    cell::RefCell,
-    io::Cursor,
-    sync::{Arc, Mutex},
-};
+use std::{cell::RefCell, io::Cursor};
 
 use asd::AudioSnippetDetector;
 use neon::{prelude::*, types::buffer::TypedArray};
@@ -21,12 +17,12 @@ fn new(mut cx: FunctionContext) -> JsResult<BoxedASD> {
 
 fn db_add(mut cx: FunctionContext) -> JsResult<JsUndefined> {
     let asd = (**cx.argument::<BoxedASD>(0)?).clone();
-    let mut asd = asd.borrow_mut();
+    let asd = asd.borrow_mut();
     let label = cx.argument::<JsString>(1)?.value(&mut cx);
 
     let fingerprint = cx.argument::<JsUint8Array>(2)?.as_slice(&cx).to_vec();
     let fingerprint_reader = Cursor::new(fingerprint);
-    let mfcc_stream = mfcc::MfccIter::new(Arc::new(Mutex::new(fingerprint_reader)));
+    let mfcc_stream = mfcc::MfccIter::new(mfcc::MfccSource::Reader(Box::new(fingerprint_reader)));
     let collect = util::collect_to_array2(mfcc_stream);
 
     asd.db.lock().unwrap().insert(label, collect.view());
@@ -77,7 +73,7 @@ fn stream_write(mut cx: FunctionContext) -> JsResult<JsPromise> {
 
 fn stream_close(mut cx: FunctionContext) -> JsResult<JsUndefined> {
     let stream = (**cx.argument::<BoxedASD>(0)?).clone();
-    let mut stream = stream.borrow_mut();
+    let stream = stream.borrow_mut();
     stream.close();
     Ok(cx.undefined())
 }
