@@ -74,7 +74,6 @@ impl Iterator for OverlappingMfccStream {
                 return Some(result);
             }
         }
-
         None
     }
 }

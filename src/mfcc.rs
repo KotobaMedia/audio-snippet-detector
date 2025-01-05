@@ -1,7 +1,7 @@
 use ndarray::Array1;
 use rustfft::Fft;
 use rustfft::{num_complex::Complex, FftPlanner};
-use std::io::{Cursor, Read};
+use std::sync::mpsc::Receiver;
 use std::sync::{Arc, Mutex};
 // We need PI for the Hamming calculation
 use std::f32::consts::PI;
@@ -14,19 +14,23 @@ const FRAME_HOP: usize = (SAMPLE_RATE * FRAME_HOP_S) as usize;
 pub const N_FILTERS: usize = 20; // Number of Mel filter banks
 
 pub struct MfccIter {
-    reader: Arc<Mutex<Cursor<Vec<u8>>>>,
+    input: Receiver<Vec<u8>>,
+    input_pos: usize,
+    input_bytes: Vec<u8>,
     ring_buffer: [f32; WINDOW_SIZE],
     index: usize,
     fft: Arc<dyn Fft<f32>>,
     hamming_window: Vec<f32>,
 }
 impl MfccIter {
-    pub fn new(reader: Arc<Mutex<Cursor<Vec<u8>>>>) -> Self {
+    pub fn new(input: Receiver<Vec<u8>>) -> Self {
         let mut planner = FftPlanner::new();
         let fft = planner.plan_fft_forward(WINDOW_SIZE);
         let hamming_window = create_hamming_window(WINDOW_SIZE);
         Self {
-            reader,
+            input,
+            input_pos: 0,
+            input_bytes: Vec::new(),
             ring_buffer: [0f32; WINDOW_SIZE],
             index: 0,
             fft,
@@ -38,19 +42,28 @@ impl Iterator for MfccIter {
     type Item = Array1<f32>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let mut sample_bytes = [0u8; 2];
-        let mut reader = self.reader.lock().unwrap();
-        while let Ok(_) = reader.read_exact(&mut sample_bytes) {
-            let sample_i16 = i16::from_le_bytes(sample_bytes);
-            let normalized_sample = sample_i16 as f32 / 32768.0;
-            self.ring_buffer[self.index] = normalized_sample;
-            self.index = (self.index + 1) % WINDOW_SIZE;
-            if self.index % FRAME_HOP != 0 {
-                continue;
+        while let Ok(bytes) = self.input.recv() {
+            self.input_bytes.extend_from_slice(&bytes);
+
+            // println!("current input_bytes: {:?}", self.input_bytes);
+
+            while self.input_bytes.len() - self.input_pos >= 2 {
+                let sample_bytes = &self.input_bytes[..2];
+
+                let sample_i16 = i16::from_le_bytes([sample_bytes[0], sample_bytes[1]]);
+                // println!("read bytes: {:?}: {:?}", sample_bytes, sample_i16);
+                self.input_bytes.drain(0..2);
+
+                let normalized_sample = sample_i16 as f32 / 32768.0;
+                self.ring_buffer[self.index] = normalized_sample;
+                self.index = (self.index + 1) % WINDOW_SIZE;
+                if self.index % FRAME_HOP != 0 {
+                    continue;
+                }
+                let ordered_buffer = reorder_ring_buffer(&self.ring_buffer, self.index);
+                let mfcc_vec = process_window(&self.fft, &self.hamming_window, &ordered_buffer);
+                return Some(mfcc_vec);
             }
-            let ordered_buffer = reorder_ring_buffer(&self.ring_buffer, self.index);
-            let mfcc_vec = process_window(&self.fft, &self.hamming_window, &ordered_buffer);
-            return Some(mfcc_vec);
         }
         None
     }
