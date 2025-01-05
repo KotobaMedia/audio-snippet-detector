@@ -44,8 +44,12 @@ fn stream_next(mut cx: FunctionContext) -> JsResult<JsPromise> {
             let obj = cx.empty_object();
             match next {
                 Some(value) => {
-                    let js_value = cx.string(value);
-                    obj.set(&mut cx, "value", js_value)?;
+                    let match_obj = cx.empty_object();
+                    let label = cx.string(&value.label);
+                    match_obj.set(&mut cx, "label", label)?;
+                    let score = cx.number(value.score as f64);
+                    match_obj.set(&mut cx, "score", score)?;
+                    obj.set(&mut cx, "value", match_obj)?;
                 }
                 None => {
                     let true_value = cx.boolean(true);

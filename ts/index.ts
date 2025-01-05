@@ -1,19 +1,22 @@
+import { Writable } from "node:stream";
 import * as native from "../index.node";
 
-export class AudioSnippetDetector {
+export class AudioSnippetDetector extends Writable {
   private _ctx: native.Context;
-  write: WritableStream;
 
   constructor() {
+    super();
     this._ctx = native.new_ctx();
-    this.write = new WritableStream<Uint8Array>({
-      write: (chunk) => {
-        native.stream_write(this._ctx, chunk);
-      },
-      close: () => {
-        native.stream_close(this._ctx);
-      },
-    });
+  }
+
+  _write(chunk: Uint8Array, encoding: string, callback: (error?: Error | null) => void) {
+    native.stream_write(this._ctx, chunk);
+    callback();
+  }
+
+  _final(callback: (error?: Error | null) => void) {
+    native.stream_close(this._ctx);
+    callback();
   }
 
   add_database(label: string, data: Uint8Array) {
