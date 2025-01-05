@@ -80,7 +80,7 @@ fn stream_close(mut cx: FunctionContext) -> JsResult<JsUndefined> {
 
 #[neon::main]
 fn main(mut cx: ModuleContext) -> NeonResult<()> {
-    cx.export_function("new", new)?;
+    cx.export_function("new_ctx", new)?;
     cx.export_function("db_add", db_add)?;
 
     cx.export_function("stream_next", stream_next)?;
