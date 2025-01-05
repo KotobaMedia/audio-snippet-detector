@@ -98,6 +98,7 @@ mod test {
     use ndarray::arr2;
 
     #[ignore = "WIP: use real data"]
+    #[test]
     fn test_database() {
         let mut db = Database::new();
         let fingerprint = arr2(&[[1.0, 2.0, 3.0], [1.0, 2.0, 3.0]]);
