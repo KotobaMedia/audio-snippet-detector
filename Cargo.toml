@@ -1,6 +1,7 @@
 [package]
 name = "audio-snippet-detector"
-version = "0.1.0"
+version = "0.0.1"
+authors = ["Keitaroh Kobayashi <keita@kbys.me>"]
 license = "MIT"
 edition = "2021"
 exclude = ["index.node"]
