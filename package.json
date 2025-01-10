@@ -1,38 +1,71 @@
 {
-  "name": "audio-snippet-detector",
+  "name": "@kotobamedia/audio-snippet-detector",
   "version": "0.0.1",
   "description": "",
-  "main": "dist/index.js",
+  "main": "dist/index.cjs",
   "files": [
     "README.md",
     "LICENSE",
-    "dist/**/*.js",
-    "index.node",
-    "index.node.d.ts"
+    "dist/**/*.?({c,m}){t,j}s",
+    "dist/**/*.map"
   ],
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
   "scripts": {
     "test": "npm run test:node && npm run test:cargo",
     "test:cargo": "cargo test",
-    "test:node": "tsc --noEmit &&  glob -c 'node --import tsx' './ts/**/*.test.ts'",
-    "cargo-build": "cargo build --message-format=json-render-diagnostics > cargo.log",
-    "cross-build": "cross build --message-format=json-render-diagnostics > cross.log",
+    "test:node": "tsc --noEmit && glob -c 'node --import tsx' './src/**/*.test.ts'",
+    "tsc-build": "shx rm -r ./dist; tsc --project tsconfig.dist.json",
+    "cargo-build": "npm run tsc-build && cargo build --message-format=json-render-diagnostics > cargo.log",
+    "cross-build": "npm run tsc-build && cross build --message-format=json-render-diagnostics > cross.log",
     "postcargo-build": "neon dist < cargo.log",
     "postcross-build": "neon dist -m /target < cross.log",
     "debug": "npm run cargo-build --",
-    "build": "npm run build:node && npm run build:cargo",
-    "build:node": "tsc --project tsconfig.dist.json",
-    "build:cargo": "npm run cargo-build -- --release",
+    "build": "npm run cargo-build -- --release",
     "cross": "npm run cross-build -- --release",
-    "prepack": "npm run build"
+    "prepack": "npm run tsc-build && neon update",
+    "version": "neon bump --binaries platforms && git add .",
+    "release": "gh workflow run release.yml -f dryrun=false -f version=patch",
+    "dryrun": "gh workflow run publish.yml -f dryrun=true"
   },
   "author": "",
   "license": "MIT",
+  "neon": {
+    "type": "library",
+    "org": "@kotobamedia",
+    "prefix": "asd-",
+    "platforms": [
+      "darwin-arm64",
+      "linux-x64-gnu",
+      "linux-arm64-gnu"
+    ],
+    "load": "./src/load.cts"
+  },
   "devDependencies": {
     "@neon-rs/cli": "0.1.82",
     "@tsconfig/node22": "^22.0.0",
     "@types/node": "^22.10.5",
     "glob": "^11.0.0",
+    "shx": "^0.3.4",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"
+  },
+  "dependencies": {
+    "@neon-rs/load": "^0.1.82"
+  },
+  "optionalDependencies": {
+    "@kotobamedia/asd-darwin-arm64": "0.0.1",
+    "@kotobamedia/asd-linux-arm64-gnu": "0.0.1",
+    "@kotobamedia/asd-linux-x64-gnu": "0.0.1"
   }
 }

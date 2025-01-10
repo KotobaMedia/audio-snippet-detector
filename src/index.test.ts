@@ -3,7 +3,7 @@ import assert from 'node:assert';
 import fs from 'node:fs';
 import {pipeline} from 'node:stream/promises';
 
-import {AudioSnippetDetector} from './index';
+import {AudioSnippetDetector} from './index.cjs';
 
 interface AsyncIterableItem<T> {
   [Symbol.asyncIterator](): AsyncIterator<T>;

@@ -5,6 +5,6 @@
     "declarationMap": true,
     "sourceMap": true
   },
-  "include": ["ts/**/*.ts"],
-  "exclude": ["node_modules", "dist", "ts/**/*.test.ts"]
+  "include": ["src/**/*.ts", "src/**/*.mts", "src/**/*.cts"],
+  "exclude": ["node_modules", "dist", "src/**/*.test.ts"]
 }

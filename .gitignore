@@ -2,6 +2,7 @@ target
 index.node
 **/node_modules
 **/.DS_Store
+kotobamedia-audio-snippet-detector-*.tgz
 npm-debug.log*cargo.log
 cross.log
 cargo.log

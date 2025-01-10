@@ -1,18 +1,3 @@
-[package]
-name = "audio-snippet-detector"
-version = "0.0.1"
-authors = ["Keitaroh Kobayashi <keita@kbys.me>"]
-license = "MIT"
-edition = "2021"
-exclude = ["index.node"]
-
-[lib]
-crate-type = ["cdylib"]
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
-neon = "1"
-
-rustfft = "6.2"
-ndarray = "0.16.1"
+[workspace]
+members = ["crates/audio-snippet-detector"]
+resolver = "2"

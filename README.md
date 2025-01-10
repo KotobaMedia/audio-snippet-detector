@@ -9,7 +9,7 @@ At this time, the detector code assumes 16-bit 16kHz signed-integer raw audio da
 ## How to use
 
 ```typescript
-import { AudioSnippetDetector } from "audio-snippet-detector";
+import { AudioSnippetDetector } from "@kotobamedia/audio-snippet-detector";
 const detector = new AudioSnippetDetector();
 
 // add the sounds you want to detect

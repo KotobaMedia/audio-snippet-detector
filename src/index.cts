@@ -1,5 +1,17 @@
 import { Writable } from "node:stream";
-import * as native from "../index.node";
+import * as native from "./load.cjs";
+
+declare module "./load.cjs" {
+  /// An opaque type representing a native context.
+  type Context = unknown;
+
+  function new_ctx(): Context;
+  function db_add(ctx: Context, label: string, data: Uint8Array): undefined;
+  type StreamValue = { label: string, score: number };
+  function stream_next(ctx: Context): Promise<{value: StreamValue, done: boolean}>;
+  function stream_write(ctx: Context, data: Uint8Array): undefined;
+  function stream_close(ctx: Context): undefined;
+}
 
 export class AudioSnippetDetector extends Writable {
   private _ctx: native.Context;
