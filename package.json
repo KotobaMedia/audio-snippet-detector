@@ -2,6 +2,12 @@
   "name": "@kotobamedia/audio-snippet-detector",
   "version": "0.0.1",
   "description": "",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/KotobaMedia/audio-snippet-detector.git"
+  },
+  "homepage": "https://github.com/KotobaMedia/audio-snippet-detector",
+  "bugs": "https://github.com/KotobaMedia/audio-snippet-detector/issues",
   "main": "dist/index.cjs",
   "files": [
     "README.md",
