@@ -1,7 +1,7 @@
 {
   "name": "@kotobamedia/asd-darwin-arm64",
   "description": "Prebuilt binary package for `audio-snippet-detector` on `darwin-arm64`.",
-  "version": "0.0.1",
+  "version": "0.0.0",
   "os": [
     "darwin"
   ],

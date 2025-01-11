@@ -1,7 +1,7 @@
 {
   "name": "@kotobamedia/asd-linux-x64-gnu",
   "description": "Prebuilt binary package for `audio-snippet-detector` on `linux-x64-gnu`.",
-  "version": "0.1.0",
+  "version": "0.0.0",
   "os": [
     "linux"
   ],
